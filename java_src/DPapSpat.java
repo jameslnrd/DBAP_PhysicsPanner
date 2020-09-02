@@ -233,6 +233,14 @@ public class DPapSpat extends MaxObject implements Executable
 
 		MaxSystem.sendMessageToBoundObject("spat"+(nb+1), "gains", gains);
 		MaxSystem.sendMessageToBoundObject("spat"+(nb+1), "pos", pOut);
+
+		Atom[] msgOut = new Atom[5];
+		msgOut[0] = Atom.newAtom("/source");
+		msgOut[1] = Atom.newAtom(nb);
+		msgOut[2] = Atom.newAtom(mPos.x);
+		msgOut[3] = Atom.newAtom(mPos.y);
+		msgOut[4] = Atom.newAtom(mPos.z);
+		outlet(0, msgOut);
 	}
 
 
@@ -253,8 +261,17 @@ public class DPapSpat extends MaxObject implements Executable
 
 
 	public void getSpeakerPos(){
-		for (int i = 0; i < speakers.size(); i++)
-			post("Speaker " + (i+1) + ": " + speakers.get(i).getPos().toString());
+		for (int i = 0; i < speakers.size(); i++){
+			Vect3D pos = speakers.get(i).getPos();
+			post("Speaker " + (i+1) + ": " + pos.toString());
+			Atom[] msgOut = new Atom[5];
+			msgOut[0] = Atom.newAtom("/speaker");
+			msgOut[1] = Atom.newAtom(i);
+			msgOut[2] = Atom.newAtom(pos.x);
+			msgOut[3] = Atom.newAtom(pos.y);
+			msgOut[4] = Atom.newAtom(pos.z);
+			outlet(0, msgOut);
+		}
 
 		sendSpeakerPos();
 	}
