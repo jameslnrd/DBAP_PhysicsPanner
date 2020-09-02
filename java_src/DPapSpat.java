@@ -2,7 +2,7 @@ import com.cycling74.max.*;
 import java.util.ArrayList;
 
 
-import miPhysics.*;
+import miPhysics.Engine.*;
 
 public class DPapSpat extends MaxObject implements Executable
 {
@@ -11,45 +11,20 @@ public class DPapSpat extends MaxObject implements Executable
 
 	int nb_speakers = 20;
 
-	Vect3D h1 = new Vect3D(50, -20., 12);
-	Vect3D h2 = new Vect3D(50, 20., 12);
-	Vect3D h3 = new Vect3D(20, 50, 12);
-	Vect3D h4 = new Vect3D(-20, 50, 12);
-	Vect3D h5 = new Vect3D(-50, 20., 12);
-	Vect3D h6 = new Vect3D(-50, -20., 12);
-	Vect3D h7 = new Vect3D(-20, -50, 12);
-	Vect3D h8 = new Vect3D(20, -50, 12);
+	private ArrayList<Mass> sources = new ArrayList<>();
+	private ArrayList<Mass> speakers = new ArrayList<>();
+	private Driver3D driver = new Driver3D();
 
-	Vect3D h9 = new Vect3D(40, -40., 40);
-	Vect3D h10 = new Vect3D(40, 00., 40);
-	Vect3D h11 = new Vect3D(40, 40, 40);
-	Vect3D h12 = new Vect3D(00, 40, 40);
-	Vect3D h13 = new Vect3D(-40, 40, 40);
-	Vect3D h14 = new Vect3D(-40, 0., 40);
-	Vect3D h15 = new Vect3D(-40, -40, 40);
-	Vect3D h16 = new Vect3D(0, -40, 40);
+	Ground3D center = new Ground3D(0, new Vect3D(0,0,0));
 
-	Vect3D h17 = new Vect3D(20, -15, 50);
-	Vect3D h18 = new Vect3D(20, 15, 50);
-	Vect3D h19 = new Vect3D(-20, 15, 50);
-	Vect3D h20 = new Vect3D(-20, -15, 50);
-
-
-	private ArrayList<Vect3D> speakers = new ArrayList<>();
-	Vect3D pos = new Vect3D();
-
-	private ArrayList<Integer> indexes = new ArrayList<>();
 	private ArrayList<double[]> distances = new ArrayList<>();
 	private ArrayList<double[]> ampli = new ArrayList<>();
 
 	double scale = 0.02;
 
-	//double[] distances;
-	//double[] ampli;
-
-
 	private MaxClock clock;
-	private PhysicalModel mdl;
+	private PhysicsContext phys;
+	private PhyModel mdl;
 
 	private static final String[] INLET_ASSIST = new String[]{
 		"inlet 1 help"
@@ -67,37 +42,48 @@ public class DPapSpat extends MaxObject implements Executable
 		setInletAssist(INLET_ASSIST);
 		setOutletAssist(OUTLET_ASSIST);
 
-		mdl = new PhysicalModel(300, 100);
+		phys = new PhysicsContext(300, 100);
+		mdl = phys.mdl();
 
-		mdl.addGround3D("h1",  h1);
-		mdl.addGround3D("h2",  h2);
-		mdl.addGround3D("h3",  h3);
-		mdl.addGround3D("h4",  h4);
-		mdl.addGround3D("h5",  h5);
-		mdl.addGround3D("h6",  h6);
-		mdl.addGround3D("h7",  h7);
-		mdl.addGround3D("h8",  h8);
+		/*
 
-		mdl.addGround3D("h9",  h9);
-		mdl.addGround3D("h10",  h10);
-		mdl.addGround3D("h11",  h11);
-		mdl.addGround3D("h12",  h12);
-		mdl.addGround3D("h13",  h13);
-		mdl.addGround3D("h14",  h14);
-		mdl.addGround3D("h15",  h15);
-		mdl.addGround3D("h16",  h16);
+		Vect3D spkPos[] = new Vect3D[nb_speakers];
+		spkPos[0] = new Vect3D(5., -2., 1.2);
+		spkPos[1] = new Vect3D(5., 2., 1.2);
+		spkPos[2] = new Vect3D(2., 5, 1.2);
+		spkPos[3] = new Vect3D(-2, 5, 1.2);
+		spkPos[4] = new Vect3D(-5, 2., 1.2);
+		spkPos[5] = new Vect3D(-5, -2., 1.2);
+		spkPos[6] = new Vect3D(-2, -5, 1.2);
+		spkPos[7] = new Vect3D(2, -5, 1.2);
 
-		mdl.addGround3D("h17",  h17);
-		mdl.addGround3D("h18",  h18);
-		mdl.addGround3D("h19",  h19);
-		mdl.addGround3D("h20",  h20);
+		spkPos[8] = new Vect3D(4, -4., 4);
+		spkPos[9] = new Vect3D(4, 0., 4);
+		spkPos[10] = new Vect3D(4, 4, 4);
+		spkPos[11] = new Vect3D(0, 4, 4);
+		spkPos[12] = new Vect3D(-4, 4, 4);
+		spkPos[13] = new Vect3D(-4, 0., 4);
+		spkPos[14] = new Vect3D(-4, -4, 4);
+		spkPos[15] = new Vect3D(0, -4, 4);
+
+		spkPos[16] = new Vect3D(2, -1.5, 5);
+		spkPos[17] = new Vect3D(2, 1.5, 5);
+		spkPos[18] = new Vect3D(-2, 1.5, 5);
+		spkPos[19] = new Vect3D(-2, -1.5, 5);
 
 
-		mdl.setGravity(0.000);
-		mdl.setFriction(0.001);
+		// Create the fixed point elements corresponding to the speakers.
+		for(int i = 0; i < nb_speakers; i++){
+			Mass g = new Ground3D(0.1, spkPos[i]);
+			mdl.addMass("h"+(i+1), g);
+			speakers.add(g);
+		}
+		*/
 
+		phys.setGlobalGravity(0.00, 0.0, 0.001);
+		phys.setGlobalFriction(0);
 
-		mdl.init();
+		phys.init();
 
 		post("The speaker setup has been initialised");
 
@@ -111,17 +97,38 @@ public class DPapSpat extends MaxObject implements Executable
 	}
 
 
-	private void addSource(){
-		int number = indexes.size();
-		String name = "m_"+indexes.size();
 
-		mdl.addMass3D(name, 10, new Vect3D(0, 0, 0  ), new Vect3D(0,0,0));
-		indexes.add(mdl.getNumberOfMats()-1);
+	public void addSpkr(int index, float x, float y, float z){
+		//post("got some stuff " + index + " " + x + " " + y + " "+ z);
+
+		// Create a new fixed point element for the speaker
+		Vect3D loc = new Vect3D(x,y,z);
+		Mass g = new Ground3D(0.1, loc);
+		speakers.add(g);
+		String name = "h"+(speakers.size());
+		phys.mdl().addMass(name, g);
+		nb_speakers = speakers.size();
+
+		post("added speaker " + name + " at : " + loc.toString());
+
+	}
+
+
+	private void addSource(){
+		int number = sources.size();
+		String name = "m_"+sources.size();
+
+		Mass3D m = new Mass3D(10, 0.1, new Vect3D(0,0,0), new Vect3D(4,0,0));
+		sources.add(m);
+		mdl.addMass(name, m);
 
 		for(int i = 0; i < nb_speakers; i++){
-			mdl.addContact3D("sp_m_"+i, 0.2, 0.0, 0., name, "h"+(i+1));
+			mdl.addInteraction("sp_m_"+sources.size()+"_"+i, new Contact3D(0.2, 0), m, speakers.get(i) );
 		}
-		mdl.addPlaneContact("p", 0, 0.01, 0.01, 2, 0, name);
+
+		mdl.addInteraction("p_"+sources.size(), new PlaneContact3D(0.1, 0.01, 2, 0), m);
+
+		mdl.addInteraction("b_"+sources.size(), new Bubble3D(5, 0.01, 0.01), m, center);
 
 		distances.add(new double[nb_speakers]);
 		ampli.add(new double[nb_speakers]);
@@ -130,18 +137,19 @@ public class DPapSpat extends MaxObject implements Executable
 			distances.get(number)[i] = 10;
 			ampli.get(number)[i] = 0;
 		}
-		post("Added a new source : " + indexes.get(indexes.size()-1));
+		post("Added a new source : " + m.getName());
 
 
 	}
 
 	public void setSources(int nb){
-		while(indexes.size()>0){
-			int curLast = indexes.get(indexes.size()-1);
-			mdl.removeMatAndConnectedLinks(curLast);
-			post("Removing previous sources a new source : " + curLast);
-			indexes.remove(indexes.size()-1);
-		}
+
+		sources.forEach((n) -> {
+			mdl.removeMassAndConnectedInteractions(n);
+			post("Removing previous source : " + n.getName());
+		});
+		sources.clear();
+
 		for(int i = 0; i < nb; i++)
 			addSource();
 	}
@@ -159,6 +167,14 @@ public class DPapSpat extends MaxObject implements Executable
 	}
 
 
+	public void removeSpeakers(){
+		speakers.forEach((n) -> {
+			phys.mdl().removeMassAndConnectedInteractions(n);
+			post("Removing speaker : " + n.getName());
+		});
+		speakers.clear();
+		nb_speakers = 0;
+	}
 
 
 	public void execute(){
@@ -168,58 +184,27 @@ public class DPapSpat extends MaxObject implements Executable
     
 	public void bang()
 	{
-		mdl.computeNSteps(simRate / frameRate);
+		phys.computeScene();
 
-
-		for(int chans = 0; chans < indexes.size(); chans++){
+		for(int chans = 0; chans < sources.size(); chans++){
 			calcGains(chans);
 		}
-		sendSpeakerPos();
+		//sendSpeakerPos();
 		sendMassPos();
-
-		//float[] list = new float[nb_speakers];
-		//Vect3D pos = new Vect3D(0,0,0);
-
-		/*
-		Atom[] l2 = new Atom[4];
-		
-		for (int i = 0; i < nbParticles; i++){
-
-			pos = mdl.getMatPosAt(1+i);
-
-			
-			l2[0] = Atom.newAtom(i+1);
-			l2[1] = Atom.newAtom((float)(pos.x/1000.+0.5));
-			l2[2] = Atom.newAtom((float)(pos.y/1000.+0.5));
-			l2[3] = Atom.newAtom((float)(pos.z/1000.));
-
-			MaxSystem.sendMessageToBoundObject("receiver", "setnode", l2);
-
-
-			list[3*i+0]= (float)pos.x;
-			list[3*i+1]= (float)pos.y;
-			list[3*i+2]= (float)pos.z;
-		}
-
-		l2[0] = Atom.newAtom((float)pos.x);
-		l2[1] = Atom.newAtom((float)pos.x);
-		l2[2] = Atom.newAtom((float)pos.x);
-		*/
-		//outlet(0,  ampli );
-		//outlet(1,  distances );
-		//outlet(2,  pOut );
-		//outlet(3,  I );
 
 	}
 
 
 	private void calcGains(int nb){
+
 		double sum = 0;
-		Vect3D mPos = mdl.getMatPosAt(indexes.get(nb));
+		Vect3D mPos = sources.get(nb).getPos();
 		Vect3D sPos;
 
 		for(int i = 0; i < nb_speakers; i++){
-			sPos = mdl.getMatPosAt(i);
+			sPos = speakers.get(i).getPos();
+
+			//sPos = mdl.getMatPosAt(i);
 			distances.get(nb)[i] = mPos.dist(sPos) + 0.1;
 			sum +=  1/(Math.pow(distances.get(nb)[i], 2));
 
@@ -236,16 +221,10 @@ public class DPapSpat extends MaxObject implements Executable
 			I += amp*amp;
 		}
 
-		//double[] pOut = new double[3];
-		pos = mdl.getMatPosAt(indexes.get(nb));
-		//pOut[0] = pos.x;
-		//pOut[1] = pos.y;
-		//pOut[2] = pos.z;
 		Atom[] pOut = new Atom[3];
-		pOut[0] = Atom.newAtom(pos.x);
-		pOut[1] = Atom.newAtom(pos.y);
-		pOut[2] = Atom.newAtom(pos.z);
-
+		pOut[0] = Atom.newAtom(mPos.x);
+		pOut[1] = Atom.newAtom(mPos.y);
+		pOut[2] = Atom.newAtom(mPos.z);
 
 		Atom[] gains = new Atom[nb_speakers];
 		for(int i = 0; i < nb_speakers; i++) {
@@ -260,10 +239,10 @@ public class DPapSpat extends MaxObject implements Executable
 
 	public void setPos(int nb, float x, float y, float z)
 	{
-		//post("channel number: " + nb);
-		//post("nb active masses: " + indexes.size());
-		if(nb <= indexes.size())
-			mdl.setMatPosAt(indexes.get(nb-1), new Vect3D(x,y,z));
+		if(nb <= sources.size()){
+			driver.moveDriver(sources.get(nb-1));
+			driver.applyPos(new Vect3D(x,y,z));
+		}
 		else
 			post("Trying to move a sound source outside of bounds!");
 	}
@@ -273,16 +252,22 @@ public class DPapSpat extends MaxObject implements Executable
 	}
 
 
+	public void getSpeakerPos(){
+		for (int i = 0; i < speakers.size(); i++)
+			post("Speaker " + (i+1) + ": " + speakers.get(i).getPos().toString());
+
+		sendSpeakerPos();
+	}
+
 	private void sendSpeakerPos(){
 		Atom[] l2 = new Atom[4];
-		for (int i = 0; i < nb_speakers; i++){
+		for (int i = 0; i < speakers.size(); i++){
 
-			pos = mdl.getMatPosAt(i);
-
+			Vect3D pos = speakers.get(i).getPos();
 			l2[0] = Atom.newAtom(i+1);
 			l2[1] = Atom.newAtom((float)(pos.x*scale + 0.5));
 			l2[2] = Atom.newAtom((float)(pos.y*scale + 0.5));
-			l2[3] = Atom.newAtom((float)(pos.z*scale * 0.01));
+			l2[3] = Atom.newAtom((float)(pos.z*scale * 0.5));
 
 			MaxSystem.sendMessageToBoundObject("spkrs", "setnode", l2);
 
@@ -291,68 +276,23 @@ public class DPapSpat extends MaxObject implements Executable
 
 	private void sendMassPos(){
 		Atom[] l2 = new Atom[4];
-		for (int i = 0; i < indexes.size(); i++){
+		for (int i = 0; i < sources.size(); i++){
 
-			pos = mdl.getMatPosAt(indexes.get(i));
-
+			Vect3D pos = sources.get(i).getPos();
 			l2[0] = Atom.newAtom(i+1);
 			l2[1] = Atom.newAtom((float)(pos.x*scale + 0.5));
 			l2[2] = Atom.newAtom((float)(pos.y*scale + 0.5));
 			l2[3] = Atom.newAtom((float)(pos.z*scale * 0.5));
 
 			MaxSystem.sendMessageToBoundObject("masses", "setnode", l2);
-
 		}
 	}
 
 	public void setRenderScale(double sc){
 		this.scale = sc;
+		sendSpeakerPos();
+		sendMassPos();
 	}
-
-    /*
-	public void inlet(int i)
-	{
-		if (i ==1)
-			clock.delay(0);
-		else
-			clock.unset();
-	}
-    
-	public void inlet(float f)
-	{
-	}
-
-	public void start(){
-		post("Starting the physical computation...");
-		clock.delay(0);
-	}
-
-	public void stop(){
-		post("Stopping the physical computation...");
-		clock.unset();
-	}
-
-	public void repulsionDist(float val){
-		post("Changing the repulsion distance to: "+ val);
-		mdl.changeDistParamOfSubset(val, "contacts");
-	}
-
-	public void frictionVal(float val){
-		post("Changing the friction value to: "+ val);
-		mdl.setFriction(val);
-	}
-
-	public void simSpeed(int val){
-		post("Changing the sim speed to: " + val + "Hz");
-		simRate = val;
-	}
-    
-    
-	public void list(Atom[] list)
-	{
-    	mdl.setMatPosAt(attrListStart, new Vect3D((list[0].getFloat()-0.5)*1000,(list[1].getFloat()-0.5)*1000, 0));
-	}
-	*/
     
 }
 
